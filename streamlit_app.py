@@ -1,66 +1,139 @@
-import altair as alt
-import pandas as pd
 import streamlit as st
+import pandas as pd
+from pulp import LpMaximize, LpProblem, LpVariable, lpSum, value
 
-# Show the page title and description.
-st.set_page_config(page_title="Movies dataset", page_icon="🎬")
-st.title("🎬 Movies dataset")
-st.write(
-    """
-    This app visualizes data from [The Movie Database (TMDB)](https://www.kaggle.com/datasets/tmdb/tmdb-movie-metadata).
-    It shows which movie genre performed best at the box office over the years. Just 
-    click on the widgets below to explore!
-    """
-)
+# Load the CSV file
+file_path = 'TT2 Alchemy Event.csv'
+df = pd.read_csv(file_path, index_col=0)
 
+# Combined function to extract loot (including currency and handling specific keywords)
+def extract_loot(value, importance_keys):
+    if isinstance(value, str):
+        parts = value.split()
+        try:
+            amount = int(parts[0])
+            item_type = ' '.join(parts[1:])
+            for key in importance_keys:
+                if key in item_type:
+                    return (key, amount)
+            return (item_type, amount)
+        except (ValueError, IndexError):
+            pass
+    return ('Unknown', 0)
 
-# Load the data from a CSV. We're caching this so it doesn't reload every time the app
-# reruns (e.g. if the user interacts with the widgets).
-@st.cache_data
-def load_data():
-    df = pd.read_csv("data/movies_genres_summary.csv")
-    return df
+# Default importance scores
+default_importance_scores = {
+    "Currency": 100,
+    "Shards": 1,
+    "Perks": 1,
+    "Raid Cards": 1,
+    "Common Equipment": 1,
+    "Rare Equipment": 1,
+    "Event Equipment": 1,
+    "Dust": 1,
+    "Skill Points": 1,
+    "Pet Eggs": 1,
+    "Clan Eggs": 1,
+    "Wildcards": 1,
+    "Clan Scrolls": 1,
+    "Hero Weapons": 1
+}
 
+# Apply the function to the dataframe
+loot_df = df.applymap(lambda x: extract_loot(x, default_importance_scores.keys()))
 
-df = load_data()
+# Extracting relevant data for optimization
+items = list(df.index)
+combinations = [(i, j) for i in items for j in items if i <= j]
 
-# Show a multiselect widget with the genres using `st.multiselect`.
-genres = st.multiselect(
-    "Genres",
-    df.genre.unique(),
-    ["Action", "Adventure", "Biography", "Comedy", "Drama", "Horror"],
-)
+# Streamlit inputs
+st.set_page_config(layout="wide")
+st.title("TT2 Alchemy Event Optimizer")
 
-# Show a slider widget with the years using `st.slider`.
-years = st.slider("Years", 1986, 2006, (2000, 2016))
+# Editable dataframe for the CSV data
+with st.expander("Edit CSV Data", expanded=False):
+    edited_df = st.data_editor(df)
 
-# Filter the dataframe based on the widget input and reshape it.
-df_filtered = df[(df["genre"].isin(genres)) & (df["year"].between(years[0], years[1]))]
-df_reshaped = df_filtered.pivot_table(
-    index="year", columns="genre", values="gross", aggfunc="sum", fill_value=0
-)
-df_reshaped = df_reshaped.sort_values(by="year", ascending=False)
+# Create input columns for the number of ingredients and the importance
+st.header("Input the number of ingredients and importance scores:")
 
+col1, col2 = st.columns(2)
 
-# Display the data as a table using `st.dataframe`.
-st.dataframe(
-    df_reshaped,
-    use_container_width=True,
-    column_config={"year": st.column_config.TextColumn("Year")},
-)
+ingredient_counts = {}
+importance_scores = {}
 
-# Display the data as an Altair chart using `st.altair_chart`.
-df_chart = pd.melt(
-    df_reshaped.reset_index(), id_vars="year", var_name="genre", value_name="gross"
-)
-chart = (
-    alt.Chart(df_chart)
-    .mark_line()
-    .encode(
-        x=alt.X("year:N", title="Year"),
-        y=alt.Y("gross:Q", title="Gross earnings ($)"),
-        color="genre:N",
-    )
-    .properties(height=320)
-)
-st.altair_chart(chart, use_container_width=True)
+with col1:
+    st.subheader("Number of Ingredients")
+    ingredient_data = pd.DataFrame({
+        "Ingredient": items,
+        "Count": [2] * len(items)
+    })
+    edited_ingredient_data = st.data_editor(ingredient_data, num_rows="fixed", use_container_width=True)
+    for index, row in edited_ingredient_data.iterrows():
+        ingredient_counts[row["Ingredient"]] = int(row["Count"])
+
+with col2:
+    st.subheader("Importance Scores")
+    importance_data = pd.DataFrame({
+        "Loot Type": list(default_importance_scores.keys()),
+        "Importance": list(default_importance_scores.values())
+    })
+    edited_importance_data = st.data_editor(importance_data, num_rows="fixed", use_container_width=True)
+    for index, row in edited_importance_data.iterrows():
+        importance_scores[row["Loot Type"]] = float(row["Importance"])
+
+# Button to trigger the optimization
+if st.button("Optimize"):
+
+    # Create a new LP problem
+    prob = LpProblem("Maximize Loot Score", LpMaximize)
+
+    # Define variables
+    combo_vars = LpVariable.dicts("Combo", combinations, lowBound=0, cat='Integer')
+
+    # Objective function: sum of (importance score * loot amount * variable) for each combination
+    prob += lpSum([
+        importance_scores.get(extract_loot(df.loc[combo], importance_scores.keys())[0], 0) * extract_loot(df.loc[combo], importance_scores.keys())[1] * combo_vars[combo]
+        for combo in combinations
+    ])
+
+    # Constraints for each item
+    for item in items:
+        # Used items constraints
+        used = lpSum([combo_vars[combo] for combo in combinations if combo[0] == item]) + \
+               lpSum([combo_vars[combo] for combo in combinations if combo[1] == item])
+
+        # Created items constraints
+        created = lpSum([combo_vars[combo] for combo in combinations if df.loc[combo] == item])
+
+        prob += used <= ingredient_counts[item] + created
+
+    # Solve the problem
+    prob.solve()
+
+    # Extract results
+    combos_used = [(combo, value(var), df.loc[combo]) for combo, var in combo_vars.items() if value(var) > 0]
+
+    # Calculate total loot and score
+    total_loot = {}
+    total_score = 0
+
+    for combo, count, product in combos_used:
+        product_name, product_amount = extract_loot(product, importance_scores.keys())
+        if product_name in total_loot:
+            total_loot[product_name] += product_amount * count
+        else:
+            total_loot[product_name] = product_amount * count
+        total_score += importance_scores.get(product_name, 0) * product_amount * count
+
+    st.header("Results")
+    st.write(f"Maximum score: {total_score}")
+
+    st.subheader("Combinations used:")
+    for combo, count, product in combos_used:
+        product_name, product_amount = extract_loot(product, importance_scores.keys())
+        st.write(f"{count} x {combo} = {product}")
+
+    st.subheader("Total loot obtained:")
+    for loot, amount in total_loot.items():
+        st.write(f"{loot}: {amount}")
