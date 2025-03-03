@@ -1,3 +1,5 @@
 streamlit
 pulp
 pandas
+pillow
+graphviz
