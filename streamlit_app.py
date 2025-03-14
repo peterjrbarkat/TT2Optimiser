@@ -1,6 +1,9 @@
 import streamlit as st
 import pandas as pd
+from components import render_results, render_ingredient_input, render_importance_input
 from pulp import LpMaximize, LpProblem, LpVariable, lpSum, value
+from config import get_ingredient_images, get_default_importance_scores
+ingredient_images = get_ingredient_images()
 
 # Load the CSV file
 file_path = 'TT2 Alchemy Event.csv'
@@ -133,6 +136,11 @@ if st.button("Optimize"):
     for combo, count, product in combos_used:
         product_name, product_amount = extract_loot(product, importance_scores.keys())
         st.write(f"{count} x {combo} = {product}")
+
+    # st.write(combos_used)
+    from render_combo import render_results
+    render_results(total_score, combos_used, total_loot, ingredient_images)
+
 
     st.subheader("Total loot obtained:")
     for loot, amount in total_loot.items():
