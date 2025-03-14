@@ -133,7 +133,7 @@ if st.button("Optimize"):
     # reorder the combos_used to have the ingredients first
     combos_used = sorted(combos_used, key=lambda x: any(key in x[2] for key in importance_scores.keys()))
 
-    st.write(combos_used)
+    # st.write(combos_used)
 
     for combo, count, product in combos_used:
         product_name, product_amount = extract_loot(product, importance_scores.keys())
