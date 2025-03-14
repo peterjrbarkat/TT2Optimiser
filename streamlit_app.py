@@ -2,111 +2,138 @@ import streamlit as st
 import pandas as pd
 from pulp import LpMaximize, LpProblem, LpVariable, lpSum, value
 
-# Import helper modules
-from utils import set_custom_styles, get_img_html, extract_loot
-from config import get_ingredient_images, get_default_importance_scores
-from components import render_results, render_ingredient_input, render_importance_input
-from optimiser import create_and_solve_lp_problem
-from graph_visualisation import render_graph_visualization
+# Load the CSV file
+file_path = 'TT2 Alchemy Event.csv'
+df = pd.read_csv(file_path, index_col=0)
 
-
-def main():
-    """Main function to run the Streamlit application"""
-    # Set page configuration
-    st.set_page_config(layout="wide", page_title="TT2 Alchemy Visual Optimizer")
-
-    # Apply custom styles
-    set_custom_styles()
-
-    # App title and description
-    st.title("TT2 Alchemy Event Visual Optimizer")
-    st.markdown("""
-    This application helps you optimize your ingredients for the Tap Titans 2 Alchemy Event.
-    Input your available ingredients and set importance values for different rewards, then click "Optimize".
-    """)
-
-    try:
-        # Load the CSV file
+# Combined function to extract loot (including currency and handling specific keywords)
+def extract_loot(value, importance_keys):
+    if isinstance(value, str):
+        parts = value.split()
         try:
-            file_path = 'TT2 Alchemy Event.csv'
-            df = pd.read_csv(file_path, index_col=0)
-            st.success(f"Successfully loaded {file_path}")
-        except Exception as e:
-            st.error(f"Error loading CSV file: {str(e)}")
-            st.info("Please make sure 'TT2 Alchemy Event.csv' is in the same directory as this script.")
-            st.stop()
+            amount = int(parts[0])
+            item_type = ' '.join(parts[1:])
+            for key in importance_keys:
+                if key in item_type:
+                    return (key, amount)
+            return (item_type, amount)
+        except (ValueError, IndexError):
+            pass
+    return ('Unknown', 0)
 
-        # Get default configuration
-        ingredient_images = get_ingredient_images()
-        default_importance_scores = get_default_importance_scores()
+# Default importance scores
+default_importance_scores = {
+    "Currency": 100,
+    "Shards": 1,
+    "Perks": 1,
+    "Raid Cards": 1,
+    "Common Equipment": 1,
+    "Rare Equipment": 1,
+    "Event Equipment": 1,
+    "Dust": 1,
+    "Skill Points": 1,
+    "Pet Eggs": 1,
+    "Clan Eggs": 1,
+    "Wildcards": 1,
+    "Clan Scrolls": 1,
+    "Hero Weapons": 1
+}
 
-        # Editable dataframe for the CSV data
-        with st.expander("Edit CSV Data", expanded=False):
-            edited_df = st.data_editor(df)
-            if edited_df is not None:
-                df = edited_df
+# Apply the function to the dataframe
+loot_df = df.applymap(lambda x: extract_loot(x, default_importance_scores.keys()))
 
-        # Create input columns for the number of ingredients and the importance
-        st.header("Input the number of ingredients and importance scores:")
+# Extracting relevant data for optimization
+items = list(df.index)
+combinations = [(i, j) for i in items for j in items if i <= j]
 
-        col1, col2 = st.columns(2)
+# Streamlit inputs
+st.set_page_config(layout="wide")
+st.title("TT2 Alchemy Event Optimizer")
 
-        # Extracting relevant data for optimization
-        items = list(df.index)
+# Editable dataframe for the CSV data
+with st.expander("Edit CSV Data", expanded=False):
+    edited_df = st.data_editor(df)
 
-        # Render ingredient inputs
-        with col1:
-            ingredient_counts = render_ingredient_input(items, ingredient_images)
+# Create input columns for the number of ingredients and the importance
+st.header("Input the number of ingredients and importance scores:")
 
-        # Render importance score inputs
-        with col2:
-            importance_scores = render_importance_input(default_importance_scores)
+col1, col2 = st.columns(2)
 
-        # Button to trigger the optimization
-        if st.button("Optimize", type="primary"):
-            with st.spinner("Calculating optimal combinations..."):
-                # Create combinations from items
-                combinations = [(i, j) for i in items for j in items if i <= j]
+ingredient_counts = {}
+importance_scores = {}
 
-                # Solve the optimization problem
-                # Note: Updated to handle the fourth return value (formatted_combos)
-                total_score, combos_used, total_loot, formatted_combos = create_and_solve_lp_problem(
-                    df,
-                    combinations,
-                    ingredient_counts,
-                    importance_scores
-                )
+with col1:
+    st.subheader("Number of Ingredients")
+    ingredient_data = pd.DataFrame({
+        "Ingredient": items,
+        "Count": [2] * len(items)
+    })
+    edited_ingredient_data = st.data_editor(ingredient_data, num_rows="fixed", use_container_width=True)
+    for index, row in edited_ingredient_data.iterrows():
+        ingredient_counts[row["Ingredient"]] = int(row["Count"])
 
-                # Render the results
-                render_results(total_score, combos_used, total_loot, ingredient_images)
+with col2:
+    st.subheader("Importance Scores")
+    importance_data = pd.DataFrame({
+        "Loot Type": list(default_importance_scores.keys()),
+        "Importance": list(default_importance_scores.values())
+    })
+    edited_importance_data = st.data_editor(importance_data, num_rows="fixed", use_container_width=True)
+    for index, row in edited_importance_data.iterrows():
+        importance_scores[row["Loot Type"]] = float(row["Importance"])
 
-                # Add a divider
-                st.markdown("---")
+# Button to trigger the optimization
+if st.button("Optimize"):
 
-                # Display the crafting flow visualization
-                st.header("Crafting Flow Visualization")
-                st.markdown("This visualization shows how ingredients are combined to produce the optimal results.")
+    # Create a new LP problem
+    prob = LpProblem("Maximize Loot Score", LpMaximize)
 
-                # We'll use a full-width container for better visibility
-                # Pass formatted_combos to the graph visualization function
-                render_graph_visualization(combos_used, ingredient_counts, total_loot, formatted_combos)
+    # Define variables
+    combo_vars = LpVariable.dicts("Combo", combinations, lowBound=0, cat='Integer')
 
-                # Add a spacer
-                st.markdown("<br><br>", unsafe_allow_html=True)
+    # Objective function: sum of (importance score * loot amount * variable) for each combination
+    prob += lpSum([
+        importance_scores.get(extract_loot(df.loc[combo], importance_scores.keys())[0], 0) * extract_loot(df.loc[combo], importance_scores.keys())[1] * combo_vars[combo]
+        for combo in combinations
+    ])
 
-    except Exception as e:
-        st.error(f"An error occurred: {str(e)}")
-        st.error("Please make sure the CSV file 'TT2 Alchemy Event.csv' is in the same directory as this script.")
-        st.exception(e)  # Show detailed error information in development
+    # Constraints for each item
+    for item in items:
+        # Used items constraints
+        used = lpSum([combo_vars[combo] for combo in combinations if combo[0] == item]) + \
+               lpSum([combo_vars[combo] for combo in combinations if combo[1] == item])
 
-    # Add footer
-    st.markdown("---")
-    st.markdown("""
-    <div style="text-align: center; color: #888;">
-        <p>TT2 Alchemy Event Optimizer | Created for Tap Titans 2 players</p>
-    </div>
-    """, unsafe_allow_html=True)
+        # Created items constraints
+        created = lpSum([combo_vars[combo] for combo in combinations if df.loc[combo] == item])
 
+        prob += used <= ingredient_counts[item] + created
 
-if __name__ == "__main__":
-    main()
+    # Solve the problem
+    prob.solve()
+
+    # Extract results
+    combos_used = [(combo, value(var), df.loc[combo]) for combo, var in combo_vars.items() if value(var) > 0]
+
+    # Calculate total loot and score
+    total_loot = {}
+    total_score = 0
+
+    for combo, count, product in combos_used:
+        product_name, product_amount = extract_loot(product, importance_scores.keys())
+        if product_name in total_loot:
+            total_loot[product_name] += product_amount * count
+        else:
+            total_loot[product_name] = product_amount * count
+        total_score += importance_scores.get(product_name, 0) * product_amount * count
+
+    st.header("Results")
+    st.write(f"Maximum score: {total_score}")
+
+    st.subheader("Combinations used:")
+    for combo, count, product in combos_used:
+        product_name, product_amount = extract_loot(product, importance_scores.keys())
+        st.write(f"{count} x {combo} = {product}")
+
+    st.subheader("Total loot obtained:")
+    for loot, amount in total_loot.items():
+        st.write(f"{loot}: {amount}")
