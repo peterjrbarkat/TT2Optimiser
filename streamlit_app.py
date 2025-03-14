@@ -4,6 +4,7 @@ from components import render_results, render_ingredient_input, render_importanc
 from pulp import LpMaximize, LpProblem, LpVariable, lpSum, value
 from config import get_ingredient_images, get_default_importance_scores
 from graph_visualisation import render_graph_visualization
+from inventory_tracking import track_inventory_from_formatted_combos, create_transition_df_from_inventory
 
 ingredient_images = get_ingredient_images()
 
@@ -157,14 +158,16 @@ if st.button("Optimize"):
     from render_combo import render_results
     render_results(total_score, combos_used, total_loot, ingredient_images)
 
-    with st.expander("Check text version", expanded=False):
+    with st.expander("Check inventory over time", expanded=False):
         for combo, count, product in combos_used:
             product_name, product_amount = extract_loot(product, importance_scores.keys())
             st.write(f"{count} x {combo} = {product}")
+
+        st.write(track_inventory_from_formatted_combos(ingredient_counts, formatted_combos))
 
     st.subheader("Total loot obtained:")
     for loot, amount in total_loot.items():
         st.write(f"{loot}: {amount}")
 
     # graph visualisation
-    render_graph_visualization(combos_used, ingredient_counts, total_loot, formatted_combos)
+    inventory_df = render_graph_visualization(combos_used, ingredient_counts, total_loot, formatted_combos)

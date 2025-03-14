@@ -247,3 +247,5 @@ def render_graph_visualization(combos_used, ingredient_counts, total_loot, forma
     except Exception as e:
         st.error(f"Error creating visualization: {str(e)}")
         st.exception(e)
+
+    return inventory_df
