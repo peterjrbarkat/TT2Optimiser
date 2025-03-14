@@ -1,6 +1,11 @@
 import streamlit as st
 import pandas as pd
+from components import render_results, render_ingredient_input, render_importance_input
 from pulp import LpMaximize, LpProblem, LpVariable, lpSum, value
+from config import get_ingredient_images, get_default_importance_scores
+from graph_visualisation import render_graph_visualization
+
+ingredient_images = get_ingredient_images()
 
 # Load the CSV file
 file_path = 'TT2 Alchemy Event.csv'
@@ -68,7 +73,7 @@ with col1:
         "Ingredient": items,
         "Count": [2] * len(items)
     })
-    edited_ingredient_data = st.data_editor(ingredient_data, num_rows="fixed", use_container_width=True)
+    edited_ingredient_data = st.data_editor(ingredient_data, num_rows="fixed", use_container_width=True, hide_index=True)
     for index, row in edited_ingredient_data.iterrows():
         ingredient_counts[row["Ingredient"]] = int(row["Count"])
 
@@ -78,7 +83,10 @@ with col2:
         "Loot Type": list(default_importance_scores.keys()),
         "Importance": list(default_importance_scores.values())
     })
-    edited_importance_data = st.data_editor(importance_data, num_rows="fixed", use_container_width=True)
+    # make "Importance" a float
+    importance_data["Importance"] = importance_data["Importance"].astype(float)
+
+    edited_importance_data = st.data_editor(importance_data, num_rows="fixed", use_container_width=True, hide_index=True)
     for index, row in edited_importance_data.iterrows():
         importance_scores[row["Loot Type"]] = float(row["Importance"])
 
@@ -116,7 +124,16 @@ if st.button("Optimize"):
 
     # Calculate total loot and score
     total_loot = {}
+    formatted_combos = []
     total_score = 0
+
+    # and then order the ouput by the order of the items
+    combos_used = sorted(combos_used, key=lambda x: items.index(x[0][0]))
+
+    # reorder the combos_used to have the ingredients first
+    combos_used = sorted(combos_used, key=lambda x: any(key in x[2] for key in importance_scores.keys()))
+
+    # st.write(combos_used)
 
     for combo, count, product in combos_used:
         product_name, product_amount = extract_loot(product, importance_scores.keys())
@@ -125,15 +142,29 @@ if st.button("Optimize"):
         else:
             total_loot[product_name] = product_amount * count
         total_score += importance_scores.get(product_name, 0) * product_amount * count
+        formatted_combos.append({
+            'input1': combo[0],
+            'input2': combo[1],
+            'count': count,
+            'result': product,
+            'is_ingredient': not any(key in product for key in importance_scores.keys() if isinstance(product, str))
+        })
 
-    st.header("Results")
-    st.write(f"Maximum score: {total_score}")
+    # st.header("Results")
+    # st.write(f"Maximum score: {total_score}")
 
-    st.subheader("Combinations used:")
-    for combo, count, product in combos_used:
-        product_name, product_amount = extract_loot(product, importance_scores.keys())
-        st.write(f"{count} x {combo} = {product}")
+    # st.write(combos_used)
+    from render_combo import render_results
+    render_results(total_score, combos_used, total_loot, ingredient_images)
+
+    with st.expander("Check text version", expanded=False):
+        for combo, count, product in combos_used:
+            product_name, product_amount = extract_loot(product, importance_scores.keys())
+            st.write(f"{count} x {combo} = {product}")
 
     st.subheader("Total loot obtained:")
     for loot, amount in total_loot.items():
         st.write(f"{loot}: {amount}")
+
+    # graph visualisation
+    render_graph_visualization(combos_used, ingredient_counts, total_loot, formatted_combos)
