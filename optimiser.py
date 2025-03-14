@@ -31,13 +31,8 @@ def create_and_solve_lp_problem(df, combinations, ingredient_counts, importance_
     # Constraints for each item
     for item in ingredient_counts.keys():
         # Used items constraints
-        used = lpSum([
-            combo_vars[combo] for combo in combinations if combo[0] == item
-        ]) + lpSum([
-            combo_vars[combo] for combo in combinations if combo[1] == item
-        ]) + lpSum([
-            combo_vars[combo] for combo in combinations if combo[0] == item and combo[1] == item
-        ])
+        used = lpSum([combo_vars[combo] for combo in combinations if combo[0] == item]) + \
+               lpSum([combo_vars[combo] for combo in combinations if combo[1] == item])
 
         # Created items constraints - ingredients created by other combinations
         created = lpSum([combo_vars[combo] for combo in combinations if df.loc[combo] == item])
