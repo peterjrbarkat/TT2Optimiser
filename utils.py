@@ -134,5 +134,24 @@ def highlight_changes(df):
 
         return highlighted
 
+    # for the df column replace ' x ' with ' x [' and add ] at the end just for the Action column
+    rounded_df['Action'] = rounded_df['Action'].str.replace(' x ', ' x [') + ']'
+    # replace . with a +
+    rounded_df['Action'] = rounded_df['Action'].str.replace(',', ' +')
+    rounded_df['Action'] = rounded_df['Action'].str.replace("'", '')
+    rounded_df['Action'] = rounded_df['Action'].str.replace(")", '')
+    rounded_df['Action'] = rounded_df['Action'].str.replace("(", '')
+
+    # put the first action value to ""
+    rounded_df['Action'].iloc[0] = ""
+
+    # reorder the columns so that the columns after Scale are put after Action
+    columns = list(rounded_df.columns)
+    columns = columns[:2] + columns[columns.index('Scale')+1:] + columns[2:columns.index('Scale')]
+    rounded_df = rounded_df[columns]
+
+    # drop the step column
+    # rounded_df = rounded_df.drop(columns=['Step'])
+
     # Apply the styling function
     return rounded_df.style.apply(style_changed_cells, axis=None)

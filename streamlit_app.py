@@ -93,86 +93,86 @@ with col2:
         importance_scores[row["Loot Type"]] = float(row["Importance"])
 
 # Button to trigger the optimization
-if st.button("Optimize"):
+# if st.button("Optimize"):
 
-    # Create a new LP problem
-    prob = LpProblem("Maximize Loot Score", LpMaximize)
+# Create a new LP problem
+prob = LpProblem("Maximize Loot Score", LpMaximize)
 
-    # Define variables
-    combo_vars = LpVariable.dicts("Combo", combinations, lowBound=0, cat='Integer')
+# Define variables
+combo_vars = LpVariable.dicts("Combo", combinations, lowBound=0, cat='Integer')
 
-    # Objective function: sum of (importance score * loot amount * variable) for each combination
-    prob += lpSum([
-        importance_scores.get(extract_loot(df.loc[combo], importance_scores.keys())[0], 0) * extract_loot(df.loc[combo], importance_scores.keys())[1] * combo_vars[combo]
-        for combo in combinations
-    ])
+# Objective function: sum of (importance score * loot amount * variable) for each combination
+prob += lpSum([
+    importance_scores.get(extract_loot(df.loc[combo], importance_scores.keys())[0], 0) * extract_loot(df.loc[combo], importance_scores.keys())[1] * combo_vars[combo]
+    for combo in combinations
+])
 
-    # Constraints for each item
-    for item in items:
-        # Used items constraints
-        used = lpSum([combo_vars[combo] for combo in combinations if combo[0] == item]) + \
-               lpSum([combo_vars[combo] for combo in combinations if combo[1] == item])
+# Constraints for each item
+for item in items:
+    # Used items constraints
+    used = lpSum([combo_vars[combo] for combo in combinations if combo[0] == item]) + \
+           lpSum([combo_vars[combo] for combo in combinations if combo[1] == item])
 
-        # Created items constraints
-        created = lpSum([combo_vars[combo] for combo in combinations if df.loc[combo] == item])
+    # Created items constraints
+    created = lpSum([combo_vars[combo] for combo in combinations if df.loc[combo] == item])
 
-        prob += used <= ingredient_counts[item] + created
+    prob += used <= ingredient_counts[item] + created
 
-    # Solve the problem
-    prob.solve()
+# Solve the problem
+prob.solve()
 
-    # Extract results
-    combos_used = [(combo, value(var), df.loc[combo]) for combo, var in combo_vars.items() if value(var) > 0]
+# Extract results
+combos_used = [(combo, value(var), df.loc[combo]) for combo, var in combo_vars.items() if value(var) > 0]
 
-    # Calculate total loot and score
-    total_loot = {}
-    formatted_combos = []
-    total_score = 0
+# Calculate total loot and score
+total_loot = {}
+formatted_combos = []
+total_score = 0
 
-    # and then order the ouput by the order of the items
-    combos_used = sorted(combos_used, key=lambda x: items.index(x[0][0]))
+# and then order the ouput by the order of the items
+combos_used = sorted(combos_used, key=lambda x: items.index(x[0][0]))
 
-    # reorder the combos_used to have the ingredients first
-    combos_used = sorted(combos_used, key=lambda x: any(key in x[2] for key in importance_scores.keys()))
+# reorder the combos_used to have the ingredients first
+combos_used = sorted(combos_used, key=lambda x: any(key in x[2] for key in importance_scores.keys()))
 
-    for combo, count, product in combos_used:
-        product_name, product_amount = extract_loot(product, importance_scores.keys())
-        if product_name in total_loot:
-            total_loot[product_name] += product_amount * count
-        else:
-            total_loot[product_name] = product_amount * count
-        total_score += importance_scores.get(product_name, 0) * product_amount * count
-        formatted_combos.append({
-            'input1': combo[0],
-            'input2': combo[1],
-            'count': count,
-            'result': product,
-            'is_ingredient': not any(key in product for key in importance_scores.keys() if isinstance(product, str))
-        })
+for combo, count, product in combos_used:
+    product_name, product_amount = extract_loot(product, importance_scores.keys())
+    if product_name in total_loot:
+        total_loot[product_name] += product_amount * count
+    else:
+        total_loot[product_name] = product_amount * count
+    total_score += importance_scores.get(product_name, 0) * product_amount * count
+    formatted_combos.append({
+        'input1': combo[0],
+        'input2': combo[1],
+        'count': count,
+        'result': product,
+        'is_ingredient': not any(key in product for key in importance_scores.keys() if isinstance(product, str))
+    })
 
-    # st.header("Results")
-    # st.write(f"Maximum score: {total_score}")
+# st.header("Results")
+# st.write(f"Maximum score: {total_score}")
 
-    # st.write(combos_used)
-    from render_combo import render_results
-    render_results(total_score, combos_used, total_loot, ingredient_images)
+# st.write(combos_used)
+from render_combo import render_results
+render_results(total_score, combos_used, total_loot, ingredient_images)
 
-    st.subheader("Check brews:")
-    st.write("Changes in the quantities are highlighted in yellow")
-    # Get your dataframe
-    df = track_inventory_from_formatted_combos(ingredient_counts, formatted_combos)
+st.subheader("Check brews:")
+st.write("Changes in the quantities are highlighted in yellow")
+# Get your dataframe
+df = track_inventory_from_formatted_combos(ingredient_counts, formatted_combos)
 
-    # Apply highlighting and display
-    styled_df = highlight_changes(df)
+# Apply highlighting and display
+styled_df = highlight_changes(df)
 
-    # Display the styled dataframe
-    st.write(styled_df, use_container_width=True)
+# Display the styled dataframe
+st.write(styled_df, use_container_width=True)
 
-    # with st.expander("Check items", expanded=False):
-    #     for combo, count, product in combos_used:
-    #         product_name, product_amount = extract_loot(product, importance_scores.keys())
-    #         st.write(f"{count} x {combo} = {product}")
+# with st.expander("Check items", expanded=False):
+#     for combo, count, product in combos_used:
+#         product_name, product_amount = extract_loot(product, importance_scores.keys())
+#         st.write(f"{count} x {combo} = {product}")
 
-    with st.expander("Visualise results", expanded=False):
-        # graph visualisation
-        inventory_df = render_graph_visualization(combos_used, ingredient_counts, total_loot, formatted_combos)
+with st.expander("Visualise results - (Experimental)", expanded=False):
+    # graph visualisation
+    inventory_df = render_graph_visualization(combos_used, ingredient_counts, total_loot, formatted_combos)
