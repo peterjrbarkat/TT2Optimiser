@@ -17,7 +17,7 @@ def render_combination_card(combo, count, product, ingredient_images):
         amount_match = re.match(r'^(\d+)\s+(.+)$', product)
         if amount_match:
             amount, type_name = amount_match.groups()
-            result_html = f'<span class="count-badge">{int(count)}x</span>'
+            result_html = f'<span class="count-badge">{int(count)}x [</span>'
 
             # First ingredient
             result_html += f'<img src="{ingredient_images.get(combo[0], "")}" width="40" height="40" class="ingredient-img"/>'
@@ -37,10 +37,12 @@ def render_combination_card(combo, count, product, ingredient_images):
             else:
                 result_html += f'{amount} {type_name}'
 
+            result_html += '<span class="equals-sign"> ]</span>'
+
             st.markdown(f'<div class="result-card">{result_html}</div>', unsafe_allow_html=True)
     else:
         # It's an ingredient product
-        result_html = f'<span class="count-badge">{int(count)}x</span>'
+        result_html = f'<span class="count-badge">{int(count)}x [</span>'
 
         # First ingredient
         result_html += f'<img src="{ingredient_images.get(combo[0], "")}" width="40" height="40" class="ingredient-img"/>'
@@ -60,6 +62,8 @@ def render_combination_card(combo, count, product, ingredient_images):
         else:
             result_html += product
 
+        result_html += '<span class="equals-sign"> ]</span>'
+
         st.markdown(f'<div class="result-card">{result_html}</div>', unsafe_allow_html=True)
 
 
@@ -74,34 +78,14 @@ def render_results(total_score, combos_used, total_loot, ingredient_images, num_
         ingredient_images (dict): Dictionary mapping ingredient names to image URLs
         num_columns (int, optional): Number of columns to display results in. Defaults to 4.
     """
-    st.header("Results")
-    st.write(f"Maximum score: {int(total_score)}")
 
     # Allow user to select number of columns
     selected_columns = 3
 
-    st.subheader("Combinations used:")
-
-    # Split combinations across selected number of columns
-    total_combos = len(combos_used)
-    combos_per_column = (total_combos + selected_columns - 1) // selected_columns  # Ceiling division
-
-    # Create the columns
-    cols = st.columns(selected_columns)
-
-    # Distribute combinations across columns
-    for i, (combo, count, product) in enumerate(combos_used):
-        column_index = i // combos_per_column
-        if column_index >= selected_columns:  # Ensure we don't exceed our columns
-            column_index = selected_columns - 1
-
-        # Render the combination in the appropriate column
-        with cols[column_index]:
-            render_combination_card(combo, count, product, ingredient_images)
-
     # Render total loot
     st.markdown('<div class="total-container">', unsafe_allow_html=True)
     st.subheader("Total loot obtained:")
+    st.write(f"Maximum score: {int(total_score)}")
 
     # Display loot in columns too if there are multiple loot types
     if len(total_loot) > selected_columns:
@@ -122,5 +106,24 @@ def render_results(total_score, combos_used, total_loot, ingredient_images, num_
                             unsafe_allow_html=True)
             else:
                 st.markdown(f'<p>{loot}: <b>{int(amount)}</b></p>', unsafe_allow_html=True)
+
+    st.subheader("Combinations used:")
+
+    # Split combinations across selected number of columns
+    total_combos = len(combos_used)
+    combos_per_column = (total_combos + selected_columns - 1) // selected_columns  # Ceiling division
+
+    # Create the columns
+    cols = st.columns(selected_columns)
+
+    # Distribute combinations across columns
+    for i, (combo, count, product) in enumerate(combos_used):
+        column_index = i // combos_per_column
+        if column_index >= selected_columns:  # Ensure we don't exceed our columns
+            column_index = selected_columns - 1
+
+        # Render the combination in the appropriate column
+        with cols[column_index]:
+            render_combination_card(combo, count, product, ingredient_images)
 
     st.markdown('</div>', unsafe_allow_html=True)

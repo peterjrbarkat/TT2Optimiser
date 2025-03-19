@@ -5,6 +5,7 @@ from pulp import LpMaximize, LpProblem, LpVariable, lpSum, value
 from config import get_ingredient_images, get_default_importance_scores
 from graph_visualisation import render_graph_visualization
 from inventory_tracking import track_inventory_from_formatted_combos, create_transition_df_from_inventory
+from utils import highlight_changes
 
 ingredient_images = get_ingredient_images()
 
@@ -134,8 +135,6 @@ if st.button("Optimize"):
     # reorder the combos_used to have the ingredients first
     combos_used = sorted(combos_used, key=lambda x: any(key in x[2] for key in importance_scores.keys()))
 
-    # st.write(combos_used)
-
     for combo, count, product in combos_used:
         product_name, product_amount = extract_loot(product, importance_scores.keys())
         if product_name in total_loot:
@@ -158,16 +157,22 @@ if st.button("Optimize"):
     from render_combo import render_results
     render_results(total_score, combos_used, total_loot, ingredient_images)
 
-    with st.expander("Check inventory over time", expanded=False):
-        for combo, count, product in combos_used:
-            product_name, product_amount = extract_loot(product, importance_scores.keys())
-            st.write(f"{count} x {combo} = {product}")
+    st.subheader("Check brews:")
+    st.write("Changes in the quantities are highlighted in yellow")
+    # Get your dataframe
+    df = track_inventory_from_formatted_combos(ingredient_counts, formatted_combos)
 
-        st.write(track_inventory_from_formatted_combos(ingredient_counts, formatted_combos))
+    # Apply highlighting and display
+    styled_df = highlight_changes(df)
 
-    st.subheader("Total loot obtained:")
-    for loot, amount in total_loot.items():
-        st.write(f"{loot}: {amount}")
+    # Display the styled dataframe
+    st.write(styled_df, use_container_width=True)
 
-    # graph visualisation
-    inventory_df = render_graph_visualization(combos_used, ingredient_counts, total_loot, formatted_combos)
+    # with st.expander("Check items", expanded=False):
+    #     for combo, count, product in combos_used:
+    #         product_name, product_amount = extract_loot(product, importance_scores.keys())
+    #         st.write(f"{count} x {combo} = {product}")
+
+    with st.expander("Visualise results", expanded=False):
+        # graph visualisation
+        inventory_df = render_graph_visualization(combos_used, ingredient_counts, total_loot, formatted_combos)

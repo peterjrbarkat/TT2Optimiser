@@ -71,7 +71,7 @@ def track_inventory_from_formatted_combos(ingredient_counts, formatted_combos):
                 loot_type = loot_match.group(2)
 
                 # Increase loot count
-                new_inventory[loot_type] = new_inventory.get(loot_type, 0) + amount
+                new_inventory[loot_type] = new_inventory.get(loot_type, 0) + amount * count
 
         # Add step to history
         history.append({"Step": f"Step {i}", "Action": action, **new_inventory})
