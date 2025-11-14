@@ -57,6 +57,8 @@ combinations = [(i, j) for i in items for j in items if i <= j]
 st.set_page_config(layout="wide")
 st.title("TT2 Alchemy Event Optimizer")
 
+st.success('Updated for Nov 2025 Event! For any feedback or bugs, please reach out to peterbarkat@gmail.com")
+
 # Editable dataframe for the CSV data
 with st.expander("Edit CSV Data", expanded=False):
     edited_df = st.data_editor(df)
