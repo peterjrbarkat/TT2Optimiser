@@ -31,18 +31,19 @@ def extract_loot(value, importance_keys):
 # Default importance scores
 default_importance_scores = {
     "Currency": 100,
-    "Shards": 1,
+    "Crafting Shards": 1,
     "Perks": 1,
+    "Skill Points": 1,
+    "Eggs": 1,
     "Raid Cards": 1,
+    "Wildcards": 1,
     "Common Equipment": 1,
     "Rare Equipment": 1,
+    "Legendary Equipment": 1,
     "Event Equipment": 1,
-    "Dust": 1,
-    "Skill Points": 1,
-    "Pet Eggs": 1,
-    "Clan Eggs": 1,
-    "Wildcards": 1,
-    "Clan Scrolls": 1,
+    "Clan Scroll": 1,
+    "Fortune Scroll": 1,
+    "Fortune Weapons": 1,
     "Hero Weapons": 1
 }
 
