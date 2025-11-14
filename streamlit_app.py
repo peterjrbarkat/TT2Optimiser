@@ -166,7 +166,7 @@ df = track_inventory_from_formatted_combos(ingredient_counts, formatted_combos)
 styled_df = highlight_changes(df)
 
 # Display the styled dataframe
-st.write(styled_df, use_container_width=True)
+st.write(styled_df)
 
 # with st.expander("Check items", expanded=False):
 #     for combo, count, product in combos_used:
