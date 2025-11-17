@@ -62,50 +62,6 @@ st.title("TT2 Alchemy Event Optimizer")
 
 st.success("Updated for Nov 2025 Event! For any feedback or bugs, please reach out to peterbarkat@gmail.com")
 
-# Upload + Google API call
-st.header("Upload screenshot to auto-extract ingredient counts")
-uploaded_file = st.file_uploader("Upload a screenshot (JPEG/PNG)", type=["jpg", "jpeg", "png"])
-
-# Resolve API key with secrets-first priority; if none, allow input
-api_key_from_secrets = None
-try:
-    if hasattr(st, "secrets") and "GOOGLE_CLOUD_API_KEY" in st.secrets:
-        api_key_from_secrets = st.secrets["GOOGLE_CLOUD_API_KEY"]
-except Exception:
-    api_key_from_secrets = None
-api_key_from_env = os.environ.get("GOOGLE_CLOUD_API_KEY")
-effective_api_key = api_key_from_secrets or api_key_from_env
-
-if effective_api_key:
-    st.caption("Using Google API key from Streamlit secrets/environment.")
-else:
-    api_key_input = st.text_input(
-        "Google API key",
-        value="",
-        type="password",
-        help="Stored only in memory for this session. Prefer st.secrets in production.",
-    )
-    effective_api_key = api_key_input or None
-
-if uploaded_file is not None and effective_api_key:
-    image_bytes = uploaded_file.read()
-    mime_type = uploaded_file.type or "image/jpeg"
-    with st.spinner("Calling Google model..."):
-        raw_text, counts_dict = extract_counts_from_image(
-            image_bytes=image_bytes,
-            mime_type=mime_type,
-            ingredient_names=list(df.index),
-            api_key=effective_api_key,
-        )
-    st.subheader("API raw response")
-    st.code(raw_text or "", language="json")
-    if counts_dict:
-        st.subheader("Parsed dictionary (applied below)")
-        st.json(counts_dict)
-        st.session_state["extracted_counts"] = counts_dict
-elif uploaded_file is not None and not effective_api_key:
-    st.warning("No API key found. Add it to Streamlit secrets or enter above.")
-
 # Editable dataframe for the CSV data
 with st.expander("Edit CSV Data", expanded=False):
     edited_df = st.data_editor(df)
@@ -120,6 +76,47 @@ importance_scores = {}
 
 with col1:
     st.subheader("Number of Ingredients")
+    uploaded_file = st.file_uploader("Upload a screenshot of alchemy lab to auto-extract ingredient counts", type=["jpg", "jpeg", "png"])
+
+    # Resolve API key with secrets-first priority; if none, allow input
+    api_key_from_secrets = None
+    try:
+        if hasattr(st, "secrets") and "GOOGLE_CLOUD_API_KEY" in st.secrets:
+            api_key_from_secrets = st.secrets["GOOGLE_CLOUD_API_KEY"]
+    except Exception:
+        api_key_from_secrets = None
+    api_key_from_env = os.environ.get("GOOGLE_CLOUD_API_KEY")
+    effective_api_key = api_key_from_secrets or api_key_from_env
+
+    # if effective_api_key:
+    #     st.caption("Using Google API key from Streamlit secrets/environment.")
+    # else:
+    #     api_key_input = st.text_input(
+    #         "Google API key",
+    #         value="",
+    #         type="password",
+    #         help="Stored only in memory for this session. Prefer st.secrets in production.",
+    #     )
+    #     effective_api_key = api_key_input or None
+
+    if uploaded_file is not None and effective_api_key:
+        image_bytes = uploaded_file.read()
+        mime_type = uploaded_file.type or "image/jpeg"
+        with st.spinner("Calling Google model..."):
+            raw_text, counts_dict = extract_counts_from_image(
+                image_bytes=image_bytes,
+                mime_type=mime_type,
+                ingredient_names=list(df.index),
+                api_key=effective_api_key,
+            )
+        st.subheader("API raw response")
+        st.code(raw_text or "", language="json")
+        if counts_dict:
+            st.subheader("Parsed dictionary (applied below)")
+            st.json(counts_dict)
+            st.session_state["extracted_counts"] = counts_dict
+    elif uploaded_file is not None and not effective_api_key:
+        st.warning("No API key found. Add it to Streamlit secrets or enter above.")
     ingredient_data = pd.DataFrame({
         "Ingredient": items,
         "Count": [
@@ -134,6 +131,7 @@ with col1:
 
 with col2:
     st.subheader("Importance Scores")
+    st.caption("Tip: You can set 'importance' to the number of gems you'd pay for each loot type to compare rewards fairly.")
     importance_data = pd.DataFrame({
         "Loot Type": list(default_importance_scores.keys()),
         "Importance": list(default_importance_scores.values())
