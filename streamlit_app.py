@@ -1,11 +1,13 @@
 import streamlit as st
 import pandas as pd
-from components import render_results, render_ingredient_input, render_importance_input
 from pulp import LpMaximize, LpProblem, LpVariable, lpSum, value
-from config import get_ingredient_images, get_default_importance_scores
-from graph_visualisation import render_graph_visualization
-from inventory_tracking import track_inventory_from_formatted_combos, create_transition_df_from_inventory
-from utils import highlight_changes
+from src.config import get_ingredient_images
+from src.graph_visualisation import render_graph_visualization
+from src.inventory_tracking import track_inventory_from_formatted_combos
+from src.inventory_tracking import highlight_changes
+import os
+import hashlib
+from src.genai_client import extract_counts_from_image
 
 ingredient_images = get_ingredient_images()
 
@@ -74,16 +76,58 @@ importance_scores = {}
 
 with col1:
     st.subheader("Number of Ingredients")
+    uploaded_file = st.file_uploader("Upload a screenshot of alchemy lab to auto-extract ingredient counts", type=["jpg", "jpeg", "png"])
+
+    # Resolve API key with secrets-first priority; if none, allow input
+    api_key_from_secrets = None
+    try:
+        if hasattr(st, "secrets") and "GOOGLE_CLOUD_API_KEY" in st.secrets:
+            api_key_from_secrets = st.secrets["GOOGLE_CLOUD_API_KEY"]
+    except Exception:
+        api_key_from_secrets = None
+    api_key_from_env = os.environ.get("GOOGLE_CLOUD_API_KEY")
+    effective_api_key = api_key_from_secrets or api_key_from_env
+
+    if uploaded_file is not None and effective_api_key:
+        # Use full bytes value and hash to avoid re-calling model on reruns
+        image_bytes = uploaded_file.getvalue()
+        mime_type = uploaded_file.type or "image/jpeg"
+        image_hash = hashlib.sha256(image_bytes).hexdigest()
+
+        # Only call the Google model when a new image is uploaded
+        if st.session_state.get("last_uploaded_image_hash") != image_hash or "extracted_counts" not in st.session_state:
+            with st.spinner("Calling Google model..."):
+                raw_text, counts_dict = extract_counts_from_image(
+                    image_bytes=image_bytes,
+                    mime_type=mime_type,
+                    ingredient_names=list(df.index),
+                    api_key=effective_api_key,
+                )
+            if counts_dict:
+                st.session_state["extracted_counts"] = counts_dict
+                st.session_state["last_uploaded_image_hash"] = image_hash
+
+        # Show parsed dictionary if available (without re-calling the model)
+        # if st.session_state.get("extracted_counts"):
+            # st.subheader("Parsed dictionary (applied below)")
+            # st.json(st.session_state["extracted_counts"])
+    elif uploaded_file is not None and not effective_api_key:
+        st.warning("No API key found. Add it to Streamlit secrets or enter above.")
     ingredient_data = pd.DataFrame({
         "Ingredient": items,
-        "Count": [2] * len(items)
+        "Count": [
+            (st.session_state.get("extracted_counts", {}).get(name, 2)) for name in items
+        ]
     })
     edited_ingredient_data = st.data_editor(ingredient_data, num_rows="fixed", use_container_width=True, hide_index=True)
     for index, row in edited_ingredient_data.iterrows():
         ingredient_counts[row["Ingredient"]] = int(row["Count"])
 
+    print(ingredient_counts)
+
 with col2:
     st.subheader("Importance Scores")
+    st.caption("Tip: You can set 'importance' to the number of gems you'd pay for each loot type to compare rewards fairly.")
     importance_data = pd.DataFrame({
         "Loot Type": list(default_importance_scores.keys()),
         "Importance": list(default_importance_scores.values())
@@ -157,7 +201,7 @@ for combo, count, product in combos_used:
 # st.write(f"Maximum score: {total_score}")
 
 # st.write(combos_used)
-from render_combo import render_results
+from src.render_combo import render_results
 render_results(total_score, combos_used, total_loot, ingredient_images)
 
 st.subheader("Check brews:")

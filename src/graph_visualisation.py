@@ -2,7 +2,7 @@ import streamlit as st
 import graphviz
 import re
 from collections import defaultdict
-from inventory_tracking import track_inventory_from_formatted_combos, create_transition_df_from_inventory
+from .inventory_tracking import track_inventory_from_formatted_combos, create_transition_df_from_inventory
 
 
 def create_crafting_visualization(transition_df, inventory_df):
@@ -222,7 +222,7 @@ def render_graph_visualization(combos_used, ingredient_counts, total_loot, forma
             transition_df = create_transition_df_from_inventory(inventory_df)
         else:
             # Use the original approach with inventory_tracking module
-            from inventory_tracking import prepare_visualization_data
+            from .inventory_tracking import prepare_visualization_data
             inventory_df, transition_df = prepare_visualization_data(combos_used, ingredient_counts)
 
         # Create the graphviz visualization

@@ -2,3 +2,4 @@ streamlit
 pulp
 pandas
 graphviz
+google-genai

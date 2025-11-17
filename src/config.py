@@ -4,7 +4,13 @@ import base64
 def get_ingredient_images():
     """Return a dictionary mapping ingredients to base64 data URI image sources loaded from the local imgs folder"""
     base_dir = os.path.dirname(__file__)
-    imgs_dir = os.path.join(base_dir, "imgs")
+
+    # Support both running from repo root (imgs at root) and from within src (imgs alongside src)
+    candidate_dirs = [
+        os.path.join(base_dir, "imgs"),
+        os.path.join(base_dir, "..", "imgs"),
+    ]
+    imgs_dir = next((d for d in map(os.path.abspath, candidate_dirs) if os.path.isdir(d)), os.path.abspath(os.path.join(base_dir, "..", "imgs")))
 
     # Map ingredient names to local filenames
     filename_map = {
@@ -42,22 +48,3 @@ def get_ingredient_images():
         except FileNotFoundError:
             images[ingredient] = ""
     return images
-
-def get_default_importance_scores():
-    """Return default importance scores for different loot types"""
-    return {
-        "Currency": 100,
-        "Shards": 1,
-        "Perks": 1,
-        "Raid Cards": 1,
-        "Common Equipment": 1,
-        "Rare Equipment": 1,
-        "Event Equipment": 1,
-        "Dust": 1,
-        "Skill Points": 1,
-        "Pet Eggs": 1,
-        "Clan Eggs": 1,
-        "Wildcards": 1,
-        "Clan Scrolls": 1,
-        "Hero Weapons": 1
-    }
