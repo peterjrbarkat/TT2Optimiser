@@ -42,22 +42,3 @@ def get_ingredient_images():
         except FileNotFoundError:
             images[ingredient] = ""
     return images
-
-def get_default_importance_scores():
-    """Return default importance scores for different loot types"""
-    return {
-        "Currency": 100,
-        "Shards": 1,
-        "Perks": 1,
-        "Raid Cards": 1,
-        "Common Equipment": 1,
-        "Rare Equipment": 1,
-        "Event Equipment": 1,
-        "Dust": 1,
-        "Skill Points": 1,
-        "Pet Eggs": 1,
-        "Clan Eggs": 1,
-        "Wildcards": 1,
-        "Clan Scrolls": 1,
-        "Hero Weapons": 1
-    }

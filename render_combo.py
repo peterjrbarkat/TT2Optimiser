@@ -1,7 +1,5 @@
 import streamlit as st
-import pandas as pd
 import re
-from utils import get_img_html, extract_loot
 
 def render_combination_card(combo, count, product, ingredient_images):
     """Render a card for a single alchemy combination

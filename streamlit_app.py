@@ -1,10 +1,9 @@
 import streamlit as st
 import pandas as pd
-from components import render_results, render_ingredient_input, render_importance_input
 from pulp import LpMaximize, LpProblem, LpVariable, lpSum, value
-from config import get_ingredient_images, get_default_importance_scores
+from config import get_ingredient_images
 from graph_visualisation import render_graph_visualization
-from inventory_tracking import track_inventory_from_formatted_combos, create_transition_df_from_inventory
+from inventory_tracking import track_inventory_from_formatted_combos
 from utils import highlight_changes
 import os
 from genai_client import extract_counts_from_image
@@ -109,11 +108,11 @@ with col1:
                 ingredient_names=list(df.index),
                 api_key=effective_api_key,
             )
-        st.subheader("API raw response")
-        st.code(raw_text or "", language="json")
+        # st.subheader("API raw response")
+        # st.code(raw_text or "", language="json")
         if counts_dict:
             st.subheader("Parsed dictionary (applied below)")
-            st.json(counts_dict)
+            # st.json(counts_dict)
             st.session_state["extracted_counts"] = counts_dict
     elif uploaded_file is not None and not effective_api_key:
         st.warning("No API key found. Add it to Streamlit secrets or enter above.")
