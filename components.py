@@ -9,7 +9,7 @@ def render_ingredient_input(items, ingredient_images):
 
     Args:
         items (list): List of ingredient names
-        ingredient_images (dict): Dictionary mapping ingredient names to image URLs
+        ingredient_images (dict): Dictionary mapping ingredient names to image sources (base64 data URIs)
 
     Returns:
         dict: Dictionary of ingredient counts keyed by ingredient name
@@ -103,7 +103,7 @@ def render_combination_card(combo, count, product, ingredient_images):
         combo (tuple): Tuple of ingredient names
         count (float): Number of times this combination is used
         product (str): The product of the combination
-        ingredient_images (dict): Dictionary mapping ingredient names to image URLs
+        ingredient_images (dict): Dictionary mapping ingredient names to image sources (base64 data URIs)
     """
     # Check if it's a product with amount (like Currency)
     if isinstance(product, str) and re.match(r'^\d+\s+', product):
@@ -164,7 +164,7 @@ def render_results(total_score, combos_used, total_loot, ingredient_images, num_
         total_score (float): The total score from optimization
         combos_used (list): List of tuples (combo, count, product)
         total_loot (dict): Dictionary of total loot by type
-        ingredient_images (dict): Dictionary mapping ingredient names to image URLs
+        ingredient_images (dict): Dictionary mapping ingredient names to image sources (base64 data URIs)
         num_columns (int, optional): Number of columns to display results in. Defaults to 4.
     """
     st.header("Results")

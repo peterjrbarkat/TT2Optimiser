@@ -65,7 +65,7 @@ def get_img_html(ingredient, ingredient_images, size=40):
 
     Args:
         ingredient (str): The ingredient name
-        ingredient_images (dict): Dictionary mapping ingredient names to image URLs
+        ingredient_images (dict): Dictionary mapping ingredient names to image sources (base64 data URIs)
         size (int): Size of the image in pixels
 
     Returns:
