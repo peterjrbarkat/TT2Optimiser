@@ -6,6 +6,8 @@ from config import get_ingredient_images, get_default_importance_scores
 from graph_visualisation import render_graph_visualization
 from inventory_tracking import track_inventory_from_formatted_combos, create_transition_df_from_inventory
 from utils import highlight_changes
+import os
+from genai_client import extract_counts_from_image
 
 ingredient_images = get_ingredient_images()
 
@@ -60,6 +62,50 @@ st.title("TT2 Alchemy Event Optimizer")
 
 st.success("Updated for Nov 2025 Event! For any feedback or bugs, please reach out to peterbarkat@gmail.com")
 
+# Upload + Google API call
+st.header("Upload screenshot to auto-extract ingredient counts")
+uploaded_file = st.file_uploader("Upload a screenshot (JPEG/PNG)", type=["jpg", "jpeg", "png"])
+
+# Resolve API key with secrets-first priority; if none, allow input
+api_key_from_secrets = None
+try:
+    if hasattr(st, "secrets") and "GOOGLE_CLOUD_API_KEY" in st.secrets:
+        api_key_from_secrets = st.secrets["GOOGLE_CLOUD_API_KEY"]
+except Exception:
+    api_key_from_secrets = None
+api_key_from_env = os.environ.get("GOOGLE_CLOUD_API_KEY")
+effective_api_key = api_key_from_secrets or api_key_from_env
+
+if effective_api_key:
+    st.caption("Using Google API key from Streamlit secrets/environment.")
+else:
+    api_key_input = st.text_input(
+        "Google API key",
+        value="",
+        type="password",
+        help="Stored only in memory for this session. Prefer st.secrets in production.",
+    )
+    effective_api_key = api_key_input or None
+
+if uploaded_file is not None and effective_api_key:
+    image_bytes = uploaded_file.read()
+    mime_type = uploaded_file.type or "image/jpeg"
+    with st.spinner("Calling Google model..."):
+        raw_text, counts_dict = extract_counts_from_image(
+            image_bytes=image_bytes,
+            mime_type=mime_type,
+            ingredient_names=list(df.index),
+            api_key=effective_api_key,
+        )
+    st.subheader("API raw response")
+    st.code(raw_text or "", language="json")
+    if counts_dict:
+        st.subheader("Parsed dictionary (applied below)")
+        st.json(counts_dict)
+        st.session_state["extracted_counts"] = counts_dict
+elif uploaded_file is not None and not effective_api_key:
+    st.warning("No API key found. Add it to Streamlit secrets or enter above.")
+
 # Editable dataframe for the CSV data
 with st.expander("Edit CSV Data", expanded=False):
     edited_df = st.data_editor(df)
@@ -76,11 +122,15 @@ with col1:
     st.subheader("Number of Ingredients")
     ingredient_data = pd.DataFrame({
         "Ingredient": items,
-        "Count": [2] * len(items)
+        "Count": [
+            (st.session_state.get("extracted_counts", {}).get(name, 2)) for name in items
+        ]
     })
     edited_ingredient_data = st.data_editor(ingredient_data, num_rows="fixed", use_container_width=True, hide_index=True)
     for index, row in edited_ingredient_data.iterrows():
         ingredient_counts[row["Ingredient"]] = int(row["Count"])
+
+    print(ingredient_counts)
 
 with col2:
     st.subheader("Importance Scores")

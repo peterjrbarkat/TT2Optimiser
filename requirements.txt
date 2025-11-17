@@ -2,3 +2,5 @@ streamlit
 pulp
 pandas
 graphviz
+easyocr
+google-genai
