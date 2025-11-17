@@ -4,7 +4,13 @@ import base64
 def get_ingredient_images():
     """Return a dictionary mapping ingredients to base64 data URI image sources loaded from the local imgs folder"""
     base_dir = os.path.dirname(__file__)
-    imgs_dir = os.path.join(base_dir, "imgs")
+
+    # Support both running from repo root (imgs at root) and from within src (imgs alongside src)
+    candidate_dirs = [
+        os.path.join(base_dir, "imgs"),
+        os.path.join(base_dir, "..", "imgs"),
+    ]
+    imgs_dir = next((d for d in map(os.path.abspath, candidate_dirs) if os.path.isdir(d)), os.path.abspath(os.path.join(base_dir, "..", "imgs")))
 
     # Map ingredient names to local filenames
     filename_map = {

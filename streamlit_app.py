@@ -1,12 +1,13 @@
 import streamlit as st
 import pandas as pd
 from pulp import LpMaximize, LpProblem, LpVariable, lpSum, value
-from config import get_ingredient_images
-from graph_visualisation import render_graph_visualization
-from inventory_tracking import track_inventory_from_formatted_combos
-from utils import highlight_changes
+from src.config import get_ingredient_images
+from src.graph_visualisation import render_graph_visualization
+from src.inventory_tracking import track_inventory_from_formatted_combos
+from src.inventory_tracking import highlight_changes
 import os
-from genai_client import extract_counts_from_image
+import hashlib
+from src.genai_client import extract_counts_from_image
 
 ingredient_images = get_ingredient_images()
 
@@ -87,33 +88,29 @@ with col1:
     api_key_from_env = os.environ.get("GOOGLE_CLOUD_API_KEY")
     effective_api_key = api_key_from_secrets or api_key_from_env
 
-    # if effective_api_key:
-    #     st.caption("Using Google API key from Streamlit secrets/environment.")
-    # else:
-    #     api_key_input = st.text_input(
-    #         "Google API key",
-    #         value="",
-    #         type="password",
-    #         help="Stored only in memory for this session. Prefer st.secrets in production.",
-    #     )
-    #     effective_api_key = api_key_input or None
-
     if uploaded_file is not None and effective_api_key:
-        image_bytes = uploaded_file.read()
+        # Use full bytes value and hash to avoid re-calling model on reruns
+        image_bytes = uploaded_file.getvalue()
         mime_type = uploaded_file.type or "image/jpeg"
-        with st.spinner("Calling Google model..."):
-            raw_text, counts_dict = extract_counts_from_image(
-                image_bytes=image_bytes,
-                mime_type=mime_type,
-                ingredient_names=list(df.index),
-                api_key=effective_api_key,
-            )
-        # st.subheader("API raw response")
-        # st.code(raw_text or "", language="json")
-        if counts_dict:
-            st.subheader("Parsed dictionary (applied below)")
-            # st.json(counts_dict)
-            st.session_state["extracted_counts"] = counts_dict
+        image_hash = hashlib.sha256(image_bytes).hexdigest()
+
+        # Only call the Google model when a new image is uploaded
+        if st.session_state.get("last_uploaded_image_hash") != image_hash or "extracted_counts" not in st.session_state:
+            with st.spinner("Calling Google model..."):
+                raw_text, counts_dict = extract_counts_from_image(
+                    image_bytes=image_bytes,
+                    mime_type=mime_type,
+                    ingredient_names=list(df.index),
+                    api_key=effective_api_key,
+                )
+            if counts_dict:
+                st.session_state["extracted_counts"] = counts_dict
+                st.session_state["last_uploaded_image_hash"] = image_hash
+
+        # Show parsed dictionary if available (without re-calling the model)
+        # if st.session_state.get("extracted_counts"):
+            # st.subheader("Parsed dictionary (applied below)")
+            # st.json(st.session_state["extracted_counts"])
     elif uploaded_file is not None and not effective_api_key:
         st.warning("No API key found. Add it to Streamlit secrets or enter above.")
     ingredient_data = pd.DataFrame({
@@ -204,7 +201,7 @@ for combo, count, product in combos_used:
 # st.write(f"Maximum score: {total_score}")
 
 # st.write(combos_used)
-from render_combo import render_results
+from src.render_combo import render_results
 render_results(total_score, combos_used, total_loot, ingredient_images)
 
 st.subheader("Check brews:")
