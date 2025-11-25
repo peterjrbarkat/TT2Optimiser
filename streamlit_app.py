@@ -61,6 +61,9 @@ st.set_page_config(layout="wide")
 st.title("TT2 Alchemy Event Optimizer")
 
 st.success("Updated for Nov 2025 Event! For any feedback or bugs, please reach out to peterbarkat@gmail.com")
+# yellow info box. If it is running slowly then check out alternative links: V2 https://tt2optimiser-v2.streamlit.app/,V3 https://tt2optimiser-v3.streamlit.app/, V4 https://tt2optimiser-v4.streamlit.app/ V5  https://tt2optimiser-v5.streamlit.app/
+# have the text as clickable links saying V1, V2, V3, V4, V5
+st.info("If the app is running slowly, try these alternative links: [V2](https://tt2optimiser-v2.streamlit.app/), [V3](https://tt2optimiser-v3.streamlit.app/), [V4](https://tt2optimiser-v4.streamlit.app/), [V5](https://tt2optimiser-v5.streamlit.app/)")
 
 # Editable dataframe for the CSV data
 with st.expander("Edit CSV Data", expanded=False):
