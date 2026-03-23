@@ -63,171 +63,171 @@ st.title("TT2 Alchemy Event Optimizer")
 # st.success("Updated for Nov 2025 Event! For any feedback or bugs, please reach out to peterbarkat@gmail.com")
 # yellow info box. If it is running slowly then check out alternative links: V2 https://tt2optimiser-v2.streamlit.app/,V3 https://tt2optimiser-v3.streamlit.app/, V4 https://tt2optimiser-v4.streamlit.app/ V5  https://tt2optimiser-v5.streamlit.app/
 # have the text as clickable links saying V1, V2, V3, V4, V5
-st.info("The app has too high usage, please use one of the alternative links: ")
-st.info("https://tt2optimiser-v2.streamlit.app/")
-st.info("https://tt2optimiser-v3.streamlit.app/")
-st.info("https://tt2optimiser-v4.streamlit.app/")
-st.info("https://tt2optimiser-v5.streamlit.app/")
-        
-#
-# # Editable dataframe for the CSV data
-# with st.expander("Edit CSV Data", expanded=False):
-#     edited_df = st.data_editor(df)
-#
-# # Create input columns for the number of ingredients and the importance
-# st.header("Input the number of ingredients and importance scores:")
-#
-# col1, col2 = st.columns(2)
-#
-# ingredient_counts = {}
-# importance_scores = {}
-#
-# with col1:
-#     st.subheader("Number of Ingredients")
-#     uploaded_file = st.file_uploader("Upload a screenshot of alchemy lab to auto-extract ingredient counts", type=["jpg", "jpeg", "png"])
-#
-#     # Resolve API key with secrets-first priority; if none, allow input
-#     api_key_from_secrets = None
-#     try:
-#         if hasattr(st, "secrets") and "GOOGLE_CLOUD_API_KEY" in st.secrets:
-#             api_key_from_secrets = st.secrets["GOOGLE_CLOUD_API_KEY"]
-#     except Exception:
-#         api_key_from_secrets = None
-#     api_key_from_env = os.environ.get("GOOGLE_CLOUD_API_KEY")
-#     effective_api_key = api_key_from_secrets or api_key_from_env
-#
-#     if uploaded_file is not None and effective_api_key:
-#         # Use full bytes value and hash to avoid re-calling model on reruns
-#         image_bytes = uploaded_file.getvalue()
-#         mime_type = uploaded_file.type or "image/jpeg"
-#         image_hash = hashlib.sha256(image_bytes).hexdigest()
-#
-#         # Only call the Google model when a new image is uploaded
-#         if st.session_state.get("last_uploaded_image_hash") != image_hash or "extracted_counts" not in st.session_state:
-#             with st.spinner("Calling Google model..."):
-#                 raw_text, counts_dict = extract_counts_from_image(
-#                     image_bytes=image_bytes,
-#                     mime_type=mime_type,
-#                     ingredient_names=list(df.index),
-#                     api_key=effective_api_key,
-#                 )
-#             if counts_dict:
-#                 st.session_state["extracted_counts"] = counts_dict
-#                 st.session_state["last_uploaded_image_hash"] = image_hash
-#
-#         # Show parsed dictionary if available (without re-calling the model)
-#         # if st.session_state.get("extracted_counts"):
-#             # st.subheader("Parsed dictionary (applied below)")
-#             # st.json(st.session_state["extracted_counts"])
-#     elif uploaded_file is not None and not effective_api_key:
-#         st.warning("No API key found. Add it to Streamlit secrets or enter above.")
-#     ingredient_data = pd.DataFrame({
-#         "Ingredient": items,
-#         "Count": [
-#             (st.session_state.get("extracted_counts", {}).get(name, 2)) for name in items
-#         ]
-#     })
-#     edited_ingredient_data = st.data_editor(ingredient_data, num_rows="fixed", use_container_width=True, hide_index=True)
-#     for index, row in edited_ingredient_data.iterrows():
-#         ingredient_counts[row["Ingredient"]] = int(row["Count"])
-#
-#     print(ingredient_counts)
-#
-# with col2:
-#     st.subheader("Importance Scores")
-#     st.caption("Tip: You can set 'importance' to the number of gems you'd pay for each loot type to compare rewards fairly.")
-#     importance_data = pd.DataFrame({
-#         "Loot Type": list(default_importance_scores.keys()),
-#         "Importance": list(default_importance_scores.values())
-#     })
-#     # make "Importance" a float
-#     importance_data["Importance"] = importance_data["Importance"].astype(float)
-#
-#     edited_importance_data = st.data_editor(importance_data, num_rows="fixed", use_container_width=True, hide_index=True)
-#     for index, row in edited_importance_data.iterrows():
-#         importance_scores[row["Loot Type"]] = float(row["Importance"])
-#
-# # Button to trigger the optimization
-# # if st.button("Optimize"):
-#
-# # Create a new LP problem
-# prob = LpProblem("Maximize Loot Score", LpMaximize)
-#
-# # Define variables
-# combo_vars = LpVariable.dicts("Combo", combinations, lowBound=0, cat='Integer')
-#
-# # Objective function: sum of (importance score * loot amount * variable) for each combination
-# prob += lpSum([
-#     importance_scores.get(extract_loot(df.loc[combo], importance_scores.keys())[0], 0) * extract_loot(df.loc[combo], importance_scores.keys())[1] * combo_vars[combo]
-#     for combo in combinations
-# ])
-#
-# # Constraints for each item
-# for item in items:
-#     # Used items constraints
-#     used = lpSum([combo_vars[combo] for combo in combinations if combo[0] == item]) + \
-#            lpSum([combo_vars[combo] for combo in combinations if combo[1] == item])
-#
-#     # Created items constraints
-#     created = lpSum([combo_vars[combo] for combo in combinations if df.loc[combo] == item])
-#
-#     prob += used <= ingredient_counts[item] + created
-#
-# # Solve the problem
-# prob.solve()
-#
-# # Extract results
-# combos_used = [(combo, value(var), df.loc[combo]) for combo, var in combo_vars.items() if value(var) > 0]
-#
-# # Calculate total loot and score
-# total_loot = {}
-# formatted_combos = []
-# total_score = 0
-#
-# # and then order the ouput by the order of the items
-# combos_used = sorted(combos_used, key=lambda x: items.index(x[0][0]))
-#
-# # reorder the combos_used to have the ingredients first
-# combos_used = sorted(combos_used, key=lambda x: any(key in x[2] for key in importance_scores.keys()))
-#
-# for combo, count, product in combos_used:
-#     product_name, product_amount = extract_loot(product, importance_scores.keys())
-#     if product_name in total_loot:
-#         total_loot[product_name] += product_amount * count
-#     else:
-#         total_loot[product_name] = product_amount * count
-#     total_score += importance_scores.get(product_name, 0) * product_amount * count
-#     formatted_combos.append({
-#         'input1': combo[0],
-#         'input2': combo[1],
-#         'count': count,
-#         'result': product,
-#         'is_ingredient': not any(key in product for key in importance_scores.keys() if isinstance(product, str))
-#     })
-#
-# # st.header("Results")
-# # st.write(f"Maximum score: {total_score}")
-#
-# # st.write(combos_used)
-# from src.render_combo import render_results
-# render_results(total_score, combos_used, total_loot, ingredient_images)
-#
-# st.subheader("Check brews:")
-# st.write("Changes in the quantities are highlighted in yellow")
-# # Get your dataframe
-# df = track_inventory_from_formatted_combos(ingredient_counts, formatted_combos)
-#
-# # Apply highlighting and display
-# styled_df = highlight_changes(df)
-#
-# # Display the styled dataframe
-# st.write(styled_df)
-#
-# # with st.expander("Check items", expanded=False):
-# #     for combo, count, product in combos_used:
-# #         product_name, product_amount = extract_loot(product, importance_scores.keys())
-# #         st.write(f"{count} x {combo} = {product}")
-#
-# with st.expander("Visualise results - (Experimental)", expanded=False):
-#     # graph visualisation
-#     inventory_df = render_graph_visualization(combos_used, ingredient_counts, total_loot, formatted_combos)
+# st.info("The app has too high usage, please use one of the alternative links: ")
+# st.info("https://tt2optimiser-v2.streamlit.app/")
+# st.info("https://tt2optimiser-v3.streamlit.app/")
+# st.info("https://tt2optimiser-v4.streamlit.app/")
+# st.info("https://tt2optimiser-v5.streamlit.app/")
+
+
+# Editable dataframe for the CSV data
+with st.expander("Edit CSV Data", expanded=False):
+    edited_df = st.data_editor(df)
+
+# Create input columns for the number of ingredients and the importance
+st.header("Input the number of ingredients and importance scores:")
+
+col1, col2 = st.columns(2)
+
+ingredient_counts = {}
+importance_scores = {}
+
+with col1:
+    st.subheader("Number of Ingredients")
+    uploaded_file = st.file_uploader("Upload a screenshot of alchemy lab to auto-extract ingredient counts", type=["jpg", "jpeg", "png"])
+
+    # Resolve API key with secrets-first priority; if none, allow input
+    api_key_from_secrets = None
+    try:
+        if hasattr(st, "secrets") and "GOOGLE_CLOUD_API_KEY" in st.secrets:
+            api_key_from_secrets = st.secrets["GOOGLE_CLOUD_API_KEY"]
+    except Exception:
+        api_key_from_secrets = None
+    api_key_from_env = os.environ.get("GOOGLE_CLOUD_API_KEY")
+    effective_api_key = api_key_from_secrets or api_key_from_env
+
+    if uploaded_file is not None and effective_api_key:
+        # Use full bytes value and hash to avoid re-calling model on reruns
+        image_bytes = uploaded_file.getvalue()
+        mime_type = uploaded_file.type or "image/jpeg"
+        image_hash = hashlib.sha256(image_bytes).hexdigest()
+
+        # Only call the Google model when a new image is uploaded
+        if st.session_state.get("last_uploaded_image_hash") != image_hash or "extracted_counts" not in st.session_state:
+            with st.spinner("Calling Google model..."):
+                raw_text, counts_dict = extract_counts_from_image(
+                    image_bytes=image_bytes,
+                    mime_type=mime_type,
+                    ingredient_names=list(df.index),
+                    api_key=effective_api_key,
+                )
+            if counts_dict:
+                st.session_state["extracted_counts"] = counts_dict
+                st.session_state["last_uploaded_image_hash"] = image_hash
+
+        # Show parsed dictionary if available (without re-calling the model)
+        # if st.session_state.get("extracted_counts"):
+            # st.subheader("Parsed dictionary (applied below)")
+            # st.json(st.session_state["extracted_counts"])
+    elif uploaded_file is not None and not effective_api_key:
+        st.warning("No API key found. Add it to Streamlit secrets or enter above.")
+    ingredient_data = pd.DataFrame({
+        "Ingredient": items,
+        "Count": [
+            (st.session_state.get("extracted_counts", {}).get(name, 2)) for name in items
+        ]
+    })
+    edited_ingredient_data = st.data_editor(ingredient_data, num_rows="fixed", use_container_width=True, hide_index=True)
+    for index, row in edited_ingredient_data.iterrows():
+        ingredient_counts[row["Ingredient"]] = int(row["Count"])
+
+    print(ingredient_counts)
+
+with col2:
+    st.subheader("Importance Scores")
+    st.caption("Tip: You can set 'importance' to the number of gems you'd pay for each loot type to compare rewards fairly.")
+    importance_data = pd.DataFrame({
+        "Loot Type": list(default_importance_scores.keys()),
+        "Importance": list(default_importance_scores.values())
+    })
+    # make "Importance" a float
+    importance_data["Importance"] = importance_data["Importance"].astype(float)
+
+    edited_importance_data = st.data_editor(importance_data, num_rows="fixed", use_container_width=True, hide_index=True)
+    for index, row in edited_importance_data.iterrows():
+        importance_scores[row["Loot Type"]] = float(row["Importance"])
+
+# Button to trigger the optimization
+# if st.button("Optimize"):
+
+# Create a new LP problem
+prob = LpProblem("Maximize Loot Score", LpMaximize)
+
+# Define variables
+combo_vars = LpVariable.dicts("Combo", combinations, lowBound=0, cat='Integer')
+
+# Objective function: sum of (importance score * loot amount * variable) for each combination
+prob += lpSum([
+    importance_scores.get(extract_loot(df.loc[combo], importance_scores.keys())[0], 0) * extract_loot(df.loc[combo], importance_scores.keys())[1] * combo_vars[combo]
+    for combo in combinations
+])
+
+# Constraints for each item
+for item in items:
+    # Used items constraints
+    used = lpSum([combo_vars[combo] for combo in combinations if combo[0] == item]) + \
+           lpSum([combo_vars[combo] for combo in combinations if combo[1] == item])
+
+    # Created items constraints
+    created = lpSum([combo_vars[combo] for combo in combinations if df.loc[combo] == item])
+
+    prob += used <= ingredient_counts[item] + created
+
+# Solve the problem
+prob.solve()
+
+# Extract results
+combos_used = [(combo, value(var), df.loc[combo]) for combo, var in combo_vars.items() if value(var) > 0]
+
+# Calculate total loot and score
+total_loot = {}
+formatted_combos = []
+total_score = 0
+
+# and then order the ouput by the order of the items
+combos_used = sorted(combos_used, key=lambda x: items.index(x[0][0]))
+
+# reorder the combos_used to have the ingredients first
+combos_used = sorted(combos_used, key=lambda x: any(key in x[2] for key in importance_scores.keys()))
+
+for combo, count, product in combos_used:
+    product_name, product_amount = extract_loot(product, importance_scores.keys())
+    if product_name in total_loot:
+        total_loot[product_name] += product_amount * count
+    else:
+        total_loot[product_name] = product_amount * count
+    total_score += importance_scores.get(product_name, 0) * product_amount * count
+    formatted_combos.append({
+        'input1': combo[0],
+        'input2': combo[1],
+        'count': count,
+        'result': product,
+        'is_ingredient': not any(key in product for key in importance_scores.keys() if isinstance(product, str))
+    })
+
+# st.header("Results")
+# st.write(f"Maximum score: {total_score}")
+
+# st.write(combos_used)
+from src.render_combo import render_results
+render_results(total_score, combos_used, total_loot, ingredient_images)
+
+st.subheader("Check brews:")
+st.write("Changes in the quantities are highlighted in yellow")
+# Get your dataframe
+df = track_inventory_from_formatted_combos(ingredient_counts, formatted_combos)
+
+# Apply highlighting and display
+styled_df = highlight_changes(df)
+
+# Display the styled dataframe
+st.write(styled_df)
+
+# with st.expander("Check items", expanded=False):
+#     for combo, count, product in combos_used:
+#         product_name, product_amount = extract_loot(product, importance_scores.keys())
+#         st.write(f"{count} x {combo} = {product}")
+
+with st.expander("Visualise results - (Experimental)", expanded=False):
+    # graph visualisation
+    inventory_df = render_graph_visualization(combos_used, ingredient_counts, total_loot, formatted_combos)

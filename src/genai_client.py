@@ -101,15 +101,15 @@ def extract_counts_from_image(
     ingredient_list = ", ".join(ingredient_names)
     prompt_text = f"""You are given a screenshot of TT2 alchemy ingredients.
 The ingredients appear in rows in this exact order:
-first row: Leaf, Sand, Flame, Pepper, Steel, Feather
-second row: Beetle, Lightning, Scale, Crystal, Tooth, Egg
-third row: Shadow, Spirit, Essence, Power
+first row: Poison	Tooth	Steel	Power	Spirit	Feather
+second row: Egg	Mushroom	Pepper	Sand	Lightning	Beetle
+third row: Flame	Scale	Essence	Shadow
 
 Return a JSON object with EXACTLY these keys and integer values only:
 {ingredient_list}
 
 Example format (keys only, no extra text): 
-{{"Leaf": 2, "Sand": 2, "Flame": 2, "Pepper": 2, "Steel": 2, "Feather": 2, "Beetle": 2, "Lightning": 2, "Scale": 2, "Crystal": 2, "Tooth": 2, "Egg": 2, "Shadow": 2, "Spirit": 2, "Essence": 2, "Power": 2}}
+{{"Poison": 2, "Tooth": 2, "Steel": 2, "Power": 2, "Spirit": 2, "Feather": 2, "Egg": 2, "Mushroom": 2, "Pepper": 2, "Sand": 2, "Lightning": 2, "Beetle": 2, "Flame": 2, "Scale": 2, "Essence": 2, "Shadow": 2}}
 
 If an ingredient is missing, set it to 0.
 Output must be JSON only."""
