@@ -101,9 +101,9 @@ def extract_counts_from_image(
     ingredient_list = ", ".join(ingredient_names)
     prompt_text = f"""You are given a screenshot of TT2 alchemy ingredients.
 The ingredients appear in rows in this exact order:
-first row: Poison	Tooth	Steel	Power	Spirit	Feather
-second row: Egg	Mushroom	Pepper	Sand	Lightning	Beetle
-third row: Flame	Scale	Essence	Shadow
+first row: Poison, Steel, Power, Spirit, Feather
+second row: Egg, Mushroom, Pepper, Sand, Lightning, Beetle
+third row: Flame, Scale, Essence, Shadow
 
 Return a JSON object with EXACTLY these keys and integer values only:
 {ingredient_list}
@@ -147,7 +147,7 @@ Output must be JSON only."""
     # Stream and collect
     full_text = ""
     for chunk in client.models.generate_content_stream(
-        model="gemini-2.5-flash-lite",
+        model="gemini-3.1-flash-lite-preview",
         contents=contents,
         config=generate_content_config,
     ):
