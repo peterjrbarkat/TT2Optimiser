@@ -51,7 +51,7 @@ default_importance_scores = {
 }
 
 # Apply the function to the dataframe
-loot_df = df.applymap(lambda x: extract_loot(x, default_importance_scores.keys()))
+loot_df = df.map(lambda x: extract_loot(x, default_importance_scores.keys()))
 
 # Extracting relevant data for optimization
 items = list(df.index)
