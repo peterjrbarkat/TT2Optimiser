@@ -35,7 +35,7 @@ def extract_loot(value, importance_keys):
 default_importance_scores = {
     "Currency": 100,
     "Crafting Shards": 1,
-    "Perks": 1,
+    "Perk Tickets": 1,
     "Skill Points": 1,
     "Eggs": 1,
     "Raid Cards": 1,
@@ -61,7 +61,7 @@ combinations = [(i, j) for i in items for j in items if i <= j]
 st.set_page_config(layout="wide")
 st.title("TT2 Alchemy Event Optimizer")
 
-st.success("Updated for Mar 2026 Event! For any feedback or bugs, please reach out to peterbarkat@gmail.com")
+st.success("Updated for June 2026 Event! For any feedback or bugs, please reach out to peterbarkat@gmail.com")
 st.info('If the app is running slowly, try these alternative links: [V2](https://tt2optimiser-v2.streamlit.app/), [V3](https://tt2optimiser-v3.streamlit.app/), [V4](https://tt2optimiser-v4.streamlit.app/), [V5](https://tt2optimiser-v5.streamlit.app/).')
 
 # Editable dataframe for the CSV data

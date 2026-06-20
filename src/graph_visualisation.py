@@ -125,7 +125,7 @@ def create_crafting_visualization(transition_df, inventory_df):
             output1_node_id = f"{output1_name}_{output1_count_raw}"
             if output1_node_id not in item_nodes:
                 item_nodes[output1_node_id] = output1_node_id
-                if output1_name not in all_ingredients or output1_name in ['Currency', 'Shards', 'Perks', 'Dust',
+                if output1_name not in all_ingredients or output1_name in ['Currency', 'Shards', 'Perk Tickets', 'Dust',
                                                                            'Skill']:
                     dot.node(output1_node_id, f"{output1_name}\n({output1_count_display})",
                              shape='box', style='filled', fillcolor='yellow')
@@ -175,7 +175,7 @@ def create_crafting_visualization(transition_df, inventory_df):
                 # Always display as integer
                 final_count_display = str(int(final_count))
 
-                if item_name in ['Currency', 'Shards', 'Perks', 'Dust', 'Skill']:
+                if item_name in ['Currency', 'Shards', 'Perk Tickets', 'Dust', 'Skill']:
                     dot.node(final_node_id, f"FINAL {item_name}\n({final_count_display})",
                              shape='box', style='filled', fillcolor='orange', penwidth='2')
                 elif item_name not in all_ingredients:
