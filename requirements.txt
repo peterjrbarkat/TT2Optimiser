@@ -3,3 +3,6 @@ pulp
 pandas
 graphviz
 google-genai
+gspread
+google-auth
+plotly

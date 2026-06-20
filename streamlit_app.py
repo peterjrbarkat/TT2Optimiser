@@ -9,6 +9,8 @@ import os
 import hashlib
 from src.genai_client import extract_counts_from_image
 from src.render_combo import render_results
+from src.run_logging import log_run, fetch_runs, is_logging_configured
+from src.run_visualisation import render_runs_analysis
 
 ingredient_images = get_ingredient_images()
 
@@ -196,6 +198,14 @@ if st.button("Run optimizer", type="primary"):
         "ingredient_counts": dict(ingredient_counts),
     }
 
+    # Log this run to the persistent backend for the community statistics.
+    log_run(
+        ingredient_counts=dict(ingredient_counts),
+        importance_scores=dict(importance_scores),
+        ingredient_order=items,
+        loot_order=list(default_importance_scores.keys()),
+    )
+
 if "optimization_output" not in st.session_state:
     st.info("Set your ingredients and importance scores, then click **Run optimizer** to see results.")
 else:
@@ -213,3 +223,33 @@ else:
         render_graph_visualization(
             o["combos_used"], o["ingredient_counts"], o["total_loot"], o["formatted_combos"]
         )
+
+# --- Community run statistics (aggregated across all logged runs) ---
+st.divider()
+with st.expander("Community run statistics", expanded=False):
+    if not is_logging_configured():
+        st.info("Run logging is not configured. Add the Google Sheets backend in secrets to enable this section.")
+    else:
+        runs_df = fetch_runs()
+        render_runs_analysis(runs_df, ingredient_names=items, loot_names=list(default_importance_scores.keys()))
+
+        # Admin-only raw export, gated by a secret token in the URL query param.
+        admin_token = None
+        try:
+            admin_token = st.secrets.get("admin_token")
+        except Exception:
+            admin_token = None
+        provided_token = st.query_params.get("admin")
+
+        if admin_token and provided_token == admin_token:
+            st.divider()
+            st.subheader("Admin export")
+            if runs_df is not None and not runs_df.empty:
+                st.download_button(
+                    "Download all runs (CSV)",
+                    data=runs_df.to_csv(index=False).encode("utf-8"),
+                    file_name="all_runs.csv",
+                    mime="text/csv",
+                )
+            else:
+                st.info("No runs to export yet.")
