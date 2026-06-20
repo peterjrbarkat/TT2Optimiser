@@ -19,6 +19,7 @@ df = pd.read_csv(file_path, index_col=0)
 # Combined function to extract loot (including currency and handling specific keywords)
 def extract_loot(value, importance_keys):
     if isinstance(value, str):
+        value = value.strip()
         parts = value.split()
         try:
             amount = int(parts[0])
@@ -28,7 +29,10 @@ def extract_loot(value, importance_keys):
                     return (key, amount)
             return (item_type, amount)
         except (ValueError, IndexError):
-            pass
+            sorted_keys = sorted(importance_keys, key=len, reverse=True)
+            for key in sorted_keys:
+                if key in value:
+                    return (key, 1)
     return ('Unknown', 0)
 
 # Default importance scores
