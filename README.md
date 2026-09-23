@@ -23,7 +23,9 @@ The optimizer models the event as an integer linear program (via PuLP) and produ
 ### Project layout
 - `streamlit_app.py`: Main Streamlit UI and optimization pipeline
 - `TT2 Alchemy Event.csv`: Base combinations and rewards
+- `update_alchemy_csv.py`: Rebuilds `TT2 Alchemy Event.csv` from a new event spreadsheet (see below)
 - `src/`
+  - `alchemy_cleaner.py`: Deterministic spreadsheet cleaning and validation used by `update_alchemy_csv.py`
   - `genai_client.py`: Calls Google GenAI to parse ingredient counts from a screenshot
   - `inventory_tracking.py`: Inventory history + change highlighting
   - `graph_visualisation.py`: Experimental transitions visual
@@ -91,6 +93,33 @@ This enables the “Upload a screenshot” flow in the “Number of Ingredients�
      - “Visualise results (Experimental)”: a graph-style overview of transitions
 
 
+### Updating the recipes for a new event
+`update_alchemy_csv.py` reads a community recipe spreadsheet, cleans it, and replaces `TT2 Alchemy Event.csv` only if every recipe cell is valid.
+
+1) Open the recipe tab in Google Sheets and copy the URL. It must include the tab's `gid`, and the sheet must be shared as "Anyone with the link can view".
+2) Check it first without changing anything:
+
+```bash
+python update_alchemy_csv.py --source "https://docs.google.com/spreadsheets/d/<ID>/edit?gid=<GID>" --dry-run
+```
+
+3) If it prints `PASS` and `MAPPING COVERAGE: 100%`, run it again without `--dry-run` to replace the CSV. Then review with `git diff "TT2 Alchemy Event.csv"` and commit.
+
+Local files also work: `--source "TT2 Alchemy Event_20_06_26.xlsx"` (add `--sheet "<name>"` to pick a worksheet) or `--source recipes.csv`.
+
+In Cursor you can run the same workflow with `/tt2-alchemy-cleaner` followed by the URL.
+
+What the cleaner checks:
+- Only the tab named by `gid` is downloaded (as xlsx, so ingredient icons drawn with `=XLOOKUP("<ingredient>", Images!...)` resolve to the ingredient name).
+- The ingredient × ingredient matrix is found by its headers, so title rows, spacer columns, and different ingredients or orderings are fine. In a local workbook, sheets named `archive`, `old`, `copy`, or `unsorted` lose to the active matrix.
+- Every cell must end up as an exact ingredient name or `<number> <reward>`, where the reward is a key of `default_importance_scores` in `streamlit_app.py`. Known spreadsheet wording is mapped by explicit rules in `src/alchemy_cleaner.py` (`REWARD_ALIASES`, `EQUIPMENT_VARIANTS`, and `EXACT_VALUES` for approved one-off cells such as `Avatar + 108 Currency`), for example `x8 Pet Eggs` to `8 Eggs` and `Legendary Equipment (Madcap Goggles)` to `1 Legendary Equipment`.
+- Anything else fails and is listed with its ingredient pair and cell: unknown rewards (`Dust`, `Perks`, `Mythic Equipment (...)`), compound rewards (`Event Avatar + 97 Currency`), blank pairs, and pairs whose two directions disagree. A blank cell whose mirror pair is filled is copied from it.
+
+Each run writes `.alchemy/candidate.csv`, `.alchemy/mapping_audit.csv` (one row per cell with its original and cleaned value), and `.alchemy/validation_report.json`. On failure, `TT2 Alchemy Event.csv` is not touched. To support a new reward, first add it to `default_importance_scores` in `streamlit_app.py`. To accept new wording for an existing reward, add an explicit alias.
+
+Run the cleaner tests with `python -m unittest discover -s tests -v`.
+
+
 ### Under the hood (very brief)
 - The app builds an integer linear program with PuLP:
   - Decision variables: integer counts per brew combination
@@ -125,7 +154,7 @@ This enables the “Upload a screenshot” flow in the “Number of Ingredients�
 
 ### Development
 - Python formatting/style is conventional; contributions welcome.
-- Keep `TT2 Alchemy Event.csv` tidy—column/index names drive parsing and optimization.
+- Keep `TT2 Alchemy Event.csv` tidy—column/index names drive parsing and optimization. Prefer regenerating it with `update_alchemy_csv.py` over hand edits.
 
 
 ### License

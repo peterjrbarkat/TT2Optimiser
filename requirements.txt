@@ -6,3 +6,4 @@ google-genai
 gspread
 google-auth
 plotly
+openpyxl

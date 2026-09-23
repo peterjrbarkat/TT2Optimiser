@@ -97,19 +97,18 @@ def extract_counts_from_image(
         mime_type=mime_type or "image/jpeg",
     )
 
-    # Build a strict instruction: exact keys and JSON object
+    # ingredient_names follows TT2 Alchemy Event.csv, i.e. the recipe sheet's header order.
     ingredient_list = ", ".join(ingredient_names)
+    example = json.dumps({name: 2 for name in ingredient_names})
     prompt_text = f"""You are given a screenshot of TT2 alchemy ingredients.
-The ingredients appear in rows in this exact order:
-first row: Leaf, Petal, Berries, Water, Poison, Crystal
-second row: Mushroom, Flame, Power, Lightning, Essence, Scale
-third row: Beetle, Spirit, Steel, Tooth
+Reading left to right, top to bottom, the ingredients appear in this exact order:
+{ingredient_list}
 
 Return a JSON object with EXACTLY these keys and integer values only:
 {ingredient_list}
 
-Example format (keys only, no extra text): 
-{{"Poison": 2, "Tooth": 2, "Steel": 2, "Power": 2, "Spirit": 2, "Feather": 2, "Egg": 2, "Mushroom": 2, "Pepper": 2, "Sand": 2, "Lightning": 2, "Beetle": 2, "Flame": 2, "Scale": 2, "Essence": 2, "Shadow": 2}}
+Example format (keys only, no extra text):
+{example}
 
 If an ingredient is missing, set it to 0.
 Output must be JSON only."""
@@ -119,8 +118,6 @@ Output must be JSON only."""
     # Ask the model to produce an object with integer properties per ingredient
     schema_properties = {name: {"type": "INTEGER"} for name in ingredient_names}
     generate_content_config = types.GenerateContentConfig(
-        temperature=0.2,
-        top_p=0.95,
         max_output_tokens=2048,
         safety_settings=[
             types.SafetySetting(category="HARM_CATEGORY_HATE_SPEECH", threshold="OFF"),
@@ -134,7 +131,8 @@ Output must be JSON only."""
             "properties": schema_properties,
             "additionalProperties": False,
         },
-        thinking_config=types.ThinkingConfig(thinking_budget=0),
+        # gemini-3.8-flash rejects thinking_budget and the "minimal" level.
+        thinking_config=types.ThinkingConfig(thinking_level="low"),
     )
 
     contents = [
@@ -147,7 +145,7 @@ Output must be JSON only."""
     # Stream and collect
     full_text = ""
     for chunk in client.models.generate_content_stream(
-        model="gemini-3.1-flash-lite",
+        model="gemini-3.8-flash",
         contents=contents,
         config=generate_content_config,
     ):
