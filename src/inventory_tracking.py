@@ -194,7 +194,7 @@ def highlight_changes(df):
     rounded_df['Action'] = rounded_df['Action'].str.replace("(", '')
 
     # put the first action value to ""
-    rounded_df['Action'].iloc[0] = ""
+    rounded_df.loc[rounded_df.index[0], "Action"] = ""
 
     # reorder the columns so that the columns after Scale are put after Action
     columns = list(rounded_df.columns)

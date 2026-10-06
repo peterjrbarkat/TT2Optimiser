@@ -9,8 +9,7 @@ dependencies = [
     "pandas",
     "numpy",
     "graphviz",
-    # PuLP 4 removes LpVariable.dicts and the bundled CBC solver this app uses.
-    "pulp>=3.3.0,<4",
+    "pulp[cbc]",
     "google-genai",
     "gspread",
     "google-auth",
