@@ -35,17 +35,17 @@ The optimizer models the event as an integer linear program (via PuLP) and produ
 
 
 ### Quickstart
-1) Install Python 3.10+ (recommended).
-2) Install dependencies:
+1) Install Python 3.12+ and [uv](https://docs.astral.sh/uv/).
+2) Install the locked dependencies:
 
 ```bash
-pip install -r requirements.txt
+uv sync
 ```
 
 3) Run the app:
 
 ```bash
-streamlit run streamlit_app.py
+uv run streamlit run streamlit_app.py
 ```
 
 4) Open the URL printed by Streamlit (usually `http://localhost:8501`).
@@ -100,7 +100,7 @@ This enables the “Upload a screenshot” flow in the “Number of Ingredients�
 2) Check it first without changing anything:
 
 ```bash
-python update_alchemy_csv.py --source "https://docs.google.com/spreadsheets/d/<ID>/edit?gid=<GID>" --dry-run
+uv run python update_alchemy_csv.py --source "https://docs.google.com/spreadsheets/d/<ID>/edit?gid=<GID>" --dry-run
 ```
 
 3) If it prints `PASS` and `MAPPING COVERAGE: 100%`, run it again without `--dry-run` to replace the CSV. Then review with `git diff "TT2 Alchemy Event.csv"` and commit.
@@ -117,7 +117,7 @@ What the cleaner checks:
 
 Each run writes `.alchemy/candidate.csv`, `.alchemy/mapping_audit.csv` (one row per cell with its original and cleaned value), and `.alchemy/validation_report.json`. On failure, `TT2 Alchemy Event.csv` is not touched. To support a new reward, first add it to `default_importance_scores` in `streamlit_app.py`. To accept new wording for an existing reward, add an explicit alias.
 
-Run the cleaner tests with `python -m unittest discover -s tests -v`.
+Run the cleaner tests with `uv run python -m unittest discover -s tests -v`.
 
 
 ### Under the hood (very brief)
@@ -149,7 +149,7 @@ Run the cleaner tests with `python -m unittest discover -s tests -v`.
   - The app uses the `graphviz` Python package. If rendering issues occur, install Graphviz system binaries for your OS or run without the experimental graph.
 
 - Google GenAI errors:
-  - Make sure `google-genai` is installed (covered by `requirements.txt`) and a valid `GOOGLE_CLOUD_API_KEY` is set. The feature is optional; the app works without it.
+  - Make sure dependencies are installed with `uv sync` (this includes `google-genai`) and a valid `GOOGLE_CLOUD_API_KEY` is set. The feature is optional; the app works without it.
 
 
 ### Development

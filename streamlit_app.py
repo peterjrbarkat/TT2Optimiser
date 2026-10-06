@@ -127,7 +127,7 @@ with col1:
             (st.session_state.get("extracted_counts", {}).get(name, 2)) for name in items
         ]
     })
-    edited_ingredient_data = st.data_editor(ingredient_data, num_rows="fixed", use_container_width=True, hide_index=True)
+    edited_ingredient_data = st.data_editor(ingredient_data, num_rows="fixed", width="stretch", hide_index=True)
     for index, row in edited_ingredient_data.iterrows():
         ingredient_counts[row["Ingredient"]] = int(row["Count"])
 
@@ -143,7 +143,7 @@ with col2:
     # make "Importance" a float
     importance_data["Importance"] = importance_data["Importance"].astype(float)
 
-    edited_importance_data = st.data_editor(importance_data, num_rows="fixed", use_container_width=True, hide_index=True)
+    edited_importance_data = st.data_editor(importance_data, num_rows="fixed", width="stretch", hide_index=True)
     for index, row in edited_importance_data.iterrows():
         importance_scores[row["Loot Type"]] = float(row["Importance"])
 

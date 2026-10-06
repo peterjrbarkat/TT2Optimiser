@@ -137,7 +137,7 @@ def render_runs_analysis(runs_df: pd.DataFrame, ingredient_names, loot_names) ->
         # Log y-axis (non-positive percentile values are simply not plotted).
         fig.update_yaxes(type="log")
         # The Plotly modebar provides a built-in PNG download for the chart.
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width="stretch")
 
         st.download_button(
             "Download chart data (CSV)",
@@ -169,7 +169,7 @@ def render_runs_analysis(runs_df: pd.DataFrame, ingredient_names, loot_names) ->
             margin=dict(l=10, r=10, t=10, b=10),
             height=420,
         )
-        st.plotly_chart(vote_fig, use_container_width=True)
+        st.plotly_chart(vote_fig, width="stretch")
         st.download_button(
             "Download vote data (CSV)",
             data=votes.to_csv(index=False).encode("utf-8"),

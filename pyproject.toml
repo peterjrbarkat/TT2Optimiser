@@ -1,0 +1,22 @@
+[project]
+name = "tt2optimiser"
+version = "0.1.0"
+description = "Tap Titans 2 Alchemy Event optimizer"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "streamlit",
+    "pandas",
+    "numpy",
+    "graphviz",
+    # PuLP 4 removes LpVariable.dicts and the bundled CBC solver this app uses.
+    "pulp>=3.3.0,<4",
+    "google-genai",
+    "gspread",
+    "google-auth",
+    "plotly",
+    "openpyxl",
+]
+
+[tool.uv]
+package = false

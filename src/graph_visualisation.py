@@ -230,7 +230,7 @@ def render_graph_visualization(combos_used, ingredient_counts, total_loot, forma
 
         # Display the results with a wider configuration
         st.caption("Note: This visualization shows the flow of ingredients through the optimization process. The loot is a running total, not just from that combination.")
-        st.graphviz_chart(dot, use_container_width=True)  # Use full container width
+        st.graphviz_chart(dot, width="stretch")
 
         # Add explanation of the visualization
         st.info("""
